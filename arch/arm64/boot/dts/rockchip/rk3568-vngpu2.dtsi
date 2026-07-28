@@ -615,11 +615,6 @@
 	reg = <0x0 0xfe38c000 0x0 0x4000>;
 	#address-cells = <1>;
 	#size-cells = <1>;
-	clocks = <&cru CLK_OTPC_NS_USR>, <&cru CLK_OTPC_NS_SBPI>,
-			<&cru PCLK_OTPC_NS>, <&cru PCLK_OTPPHY>;
-	clock-names = "otp", "sbpi", "apb", "phy";
-	resets = <&cru SRST_OTPPHY>;
-	reset-names = "otp_phy";
 
 	specification_serial_number: specification-serial-number@7 {
 		reg = <0x07 0x1>;
