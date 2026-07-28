@@ -6,12 +6,13 @@ on:
     paths:
       - 'arch/arm64/boot/dts/rockchip/rk3568-dg-nas-lite.dts'
       - 'arch/arm64/boot/dts/rockchip/rk3568.dtsi'
+      # 监听新增的 include 文件
       - 'arch/arm64/boot/dts/rockchip/rk3568-vngpu.dtsi'
       - 'arch/arm64/boot/dts/rockchip/rk3568-vngpu-rk809.dtsi'
       - 'arch/arm64/boot/dts/rockchip/rk3568-ramoops.dtsi'
       - 'arch/arm64/boot/dts/rockchip/Makefile'
       - 'arch/arm64/configs/defconfig'
-      - '.github/workflows/build-rk3568-dg-nas-lite-dtb.yml'
+      - '.github/workflows/build-rk3568-dg-nas-lite-dtb-verbose.yml'
   pull_request:
     branches: [ main ]
     paths:
@@ -64,13 +65,19 @@ jobs:
           
           echo "🔨 Step 2: Compiling to $DTB_FILE..."
           
-          # 核心修改：使用 || 来捕获错误，确保在 set -e 环境下也能执行调试代码
-          # 即使 dtc 失败，|| 后面的代码块也会执行
-          ./scripts/dtc/dtc -I dts -O dtb -o $DTB_FILE -@ -Wno-unit_address_vs_reg $TMP_FILE 2>&1 | tee $LOG_FILE || {
+          # ==========================================================
+          # 关键修复逻辑：
+          # 1. 使用 2> 将错误输出重定向到文件，而不是使用管道 tee
+          # 2. 使用 || true 强制忽略 dtc 的退出码，防止脚本因 set -e 立即退出
+          # ==========================================================
+          ./scripts/dtc/dtc -I dts -O dtb -o $DTB_FILE -@ -Wno-unit_address_vs_reg $TMP_FILE 2> $LOG_FILE || true
+          
+          # 检查日志文件大小，如果有内容说明有错误
+          if [ -s $LOG_FILE ]; then
             echo "❌ DTC Compilation failed. Analyzing error context..."
+            cat $LOG_FILE
             
-            # 提取错误行号 (使用 sed 兼容性更好)
-            # 错误格式: Error: /tmp/preprocessed.dts:5561.2-6 ...
+            # 提取错误行号
             LINE_NUM=$(sed -n 's/.*preprocessed.dts:\([0-9]*\).*/\1/p' $LOG_FILE | head -1)
             
             if [ -n "$LINE_NUM" ] && [ "$LINE_NUM" -gt 0 ]; then
@@ -82,7 +89,7 @@ jobs:
               # 打印出错位置附近的代码，带行号
               sed -n "${START},$((LINE_NUM + 10))p" $TMP_FILE | cat -n
               echo "--------------------------------------------------"
-              echo "💡 提示：请检查上面显示的代码段，通常是因为节点定义放在了根节点 }; 之外，或者括号不匹配。"
+              echo "💡 提示：请检查上面显示的代码段。通常是因为节点定义放在了根节点 }; 之外，或者括号不匹配。"
             else
               echo "无法解析具体行号，显示文件末尾内容："
               tail -n 50 $TMP_FILE
@@ -90,7 +97,7 @@ jobs:
             
             # 打印完毕后，显式退出并报错
             exit 1
-          }
+          fi
           
           echo "✅ Build complete."
 
