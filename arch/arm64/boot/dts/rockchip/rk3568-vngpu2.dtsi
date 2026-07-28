@@ -295,7 +295,7 @@
 		clock-names = "aclk", "iface";
 		power-domains = <&power RK3568_PD_NPU>;
 		#iommu-cells = <0>;
-		status = "disabled";
+		status = "okay";
 	};
 
 	sram: sram@fdcc0000 {
