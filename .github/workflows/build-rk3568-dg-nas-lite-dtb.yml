@@ -1,4 +1,3 @@
-# .github/workflows/build-rk3568-dg-nas-lite-dtb.yml
 name: Build RK3568 DG-NAS-Lite DTB
 
 on:
@@ -48,9 +47,8 @@ jobs:
 
       - name: Build Target DTB
         run: |
-          # 🌟使用标准的 make dtbs 目标，100% 触发 Kbuild 遍历所有 subdir
-          # 它会自动编译 Makefile 中注册的 rk3568-dg-nas-lite.dtb
-          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j$(nproc) dtbs
+          # 仅编译指定的 dts 文件，不触发全量 dtbs 编译
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j$(nproc) arch/arm64/boot/dts/rockchip/rk3568-dg-nas-lite.dtb
 
       - name: Verify output
         run: |
