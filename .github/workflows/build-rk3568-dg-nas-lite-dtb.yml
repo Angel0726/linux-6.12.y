@@ -1,5 +1,5 @@
 # .github/workflows/build-rk3568-dg-nas-lite-dtb.yml
-name: Build RK3568 DG-NAS-Lite DTB (Debug)
+name: Build RK3568 DG-NAS-Lite DTB
 
 on:
   push:
@@ -46,39 +46,26 @@ jobs:
         run: |
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- defconfig
 
-      - name: 1. Print ROCKCHIP Configs
-        run: |
-          echo "=== Checking .config for ARCH_ROCKCHIP ==="
-          grep -E 'CONFIG_ARCH_ROCKCHIP' .config || echo "CONFIG_ARCH_ROCKCHIP not found!"
-
-      - name: 2. Print Original rockchip Makefile
-        run: |
-          echo "=== Original arch/arm64/boot/dts/rockchip/Makefile ==="
-          cat arch/arm64/boot/dts/rockchip/Makefile
-
-      - name: 3. Register DTB in rockchip Makefile
+      - name: Patch rockchip Makefile
         run: |
           MAKEFILE=arch/arm64/boot/dts/rockchip/Makefile
           if ! grep -q "rk3568-dg-nas-lite.dtb" "$MAKEFILE"; then
-            # 确保转义正确，写入的是字面量 $(CONFIG_ARCH_ROCKCHIP)
-            echo 'dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3568-dg-nas-lite.dtb' >> "$MAKEFILE"
-            echo "Added rk3568-dg-nas-lite.dtb to $MAKEFILE"
+            # 🌟关键修改：使用 sed 将规则插入到 subdir-y 之前，确保一定被读取到
+            sed -i '/subdir-y/i dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3568-dg-nas-lite.dtb' "$MAKEFILE"
+            echo "Patched Makefile successfully."
           else
-            echo "rk3568-dg-nas-lite.dtb already registered."
+            echo "Already patched."
           fi
+          
+          echo "=== Verifying Patched Makefile ==="
+          tail -n 10 "$MAKEFILE"
 
-      - name: 4. Print Modified rockchip Makefile
+      - name: Build Rockchip DTBS
         run: |
-          echo "=== Modified arch/arm64/boot/dts/rockchip/Makefile ==="
-          cat arch/arm64/boot/dts/rockchip/Makefile
+          # 🌟关键修改：直接编译整个 rockchip 目录，避开单文件路径解析 bug
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j$(nproc) arch/arm64/boot/dts/rockchip/
 
-      - name: 5. Build Target DTB with Verbose Output (V=1)
-        run: |
-          # 使用 V=1 打印详细的执行命令
-          # 直接编译指定目标，看它到底在哪里报错
-          make V=1 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j$(nproc) arch/arm64/boot/dts/rockchip/rk3568-dg-nas-lite.dtb
-
-      - name: 6. Verify output
+      - name: Verify output
         run: |
           ls -lh arch/arm64/boot/dts/rockchip/rk3568-dg-nas-lite.dtb
           dtc -I dtb -O dts \
@@ -86,10 +73,10 @@ jobs:
               -o /tmp/rk3568-dg-nas-lite.verify.dts
           head -n 30 /tmp/rk3568-dg-nas-lite.verify.dts
 
-      - name: 7. Upload DTB artifact
+      - name: Upload DTB artifact
         uses: actions/upload-artifact@v4
         with:
           name: rk3568-dg-nas-lite-dtb
           path: arch/arm64/boot/dts/rockchip/rk3568-dg-nas-lite.dtb
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 30
