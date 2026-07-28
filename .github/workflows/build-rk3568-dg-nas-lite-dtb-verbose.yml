@@ -1,4 +1,4 @@
-name: Build RK3568 DG-NAS-Lite DTB
+name: Build RK3568 DG-NAS-Lite DTB verbose
 
 on:
   push:
