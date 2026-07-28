@@ -63,18 +63,18 @@ jobs:
           else
             echo "rk3568-dg-nas-lite.dtb already registered."
           fi
-          # 输出末尾内容以确认
           tail -n 5 "$MAKEFILE"
 
-      - name: Build the target DTB only
+      - name: Build the target DTB
         run: |
-          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j$(nproc) \
-               arch/arm64/boot/dts/rockchip/rk3568-dg-nas-lite.dtb
+          # 先编译必要的 scripts 工具（如 dtc）
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j$(nproc) scripts
+          # 进入 rockchip 目录直接编译目标 dtb，避免 Kbuild 路径重复拼接问题
+          make -C arch/arm64/boot/dts/rockchip ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j$(nproc) rk3568-dg-nas-lite.dtb
 
       - name: Verify output
         run: |
           ls -lh arch/arm64/boot/dts/rockchip/rk3568-dg-nas-lite.dtb
-          # 用 dtc 反编译一下，确认产物有效
           dtc -I dtb -O dts \
               arch/arm64/boot/dts/rockchip/rk3568-dg-nas-lite.dtb \
               -o /tmp/rk3568-dg-nas-lite.verify.dts
