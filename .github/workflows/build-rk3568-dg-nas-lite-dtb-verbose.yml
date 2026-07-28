@@ -1,4 +1,4 @@
-name: Build RK3568 DG-NAS-Lite DTB verbose
+name: Build RK3568 DG-NAS-Lite DTB
 
 on:
   push:
@@ -6,7 +6,6 @@ on:
     paths:
       - 'arch/arm64/boot/dts/rockchip/rk3568-dg-nas-lite.dts'
       - 'arch/arm64/boot/dts/rockchip/rk3568.dtsi'
-      # 新增：监听 include 文件的变动
       - 'arch/arm64/boot/dts/rockchip/rk3568-vngpu.dtsi'
       - 'arch/arm64/boot/dts/rockchip/rk3568-vngpu-rk809.dtsi'
       - 'arch/arm64/boot/dts/rockchip/rk3568-ramoops.dtsi'
@@ -17,8 +16,8 @@ on:
     branches: [ main ]
     paths:
       - 'arch/arm64/boot/dts/rockchip/rk3568-dg-nas-lite.dts'
-      - 'arch/arm64/boot/dts/rockchip/Makefile'
       - 'arch/arm64/boot/dts/rockchip/*.dtsi'
+      - 'arch/arm64/boot/dts/rockchip/Makefile'
   workflow_dispatch:
 
 concurrency:
@@ -53,43 +52,45 @@ jobs:
 
       - name: Build Target DTB (Manual Compilation)
         run: |
-          # 定义源文件和输出文件
+          # 定义变量
           DTS_FILE="arch/arm64/boot/dts/rockchip/rk3568-dg-nas-lite.dts"
           DTB_FILE="arch/arm64/boot/dts/rockchip/rk3568-dg-nas-lite.dtb"
-          
-          # 定义包含路径 (必须包含内核源码的相关目录)
+          TMP_FILE="/tmp/preprocessed.dts"
+          LOG_FILE="/tmp/dtc_error.log"
           INCLUDES="-I./arch/arm64/boot/dts -I./include -I./scripts/dtc/include-prefixes"
           
           echo "🔨 Step 1: Preprocessing $DTS_FILE..."
-          # 使用 gcc 预处理，展开 #include 和处理宏定义
-          gcc -E -P -x assembler-with-cpp -undef -D__DTS__ $INCLUDES $DTS_FILE -o /tmp/preprocessed.dts
+          gcc -E -P -x assembler-with-cpp -undef -D__DTS__ $INCLUDES $DTS_FILE -o $TMP_FILE
           
           echo "🔨 Step 2: Compiling to $DTB_FILE..."
           
-          # 运行 DTC 编译，并在失败时输出详细上下文
-          if ! ./scripts/dtc/dtc -I dts -O dtb -o $DTB_FILE -@ -Wno-unit_address_vs_reg /tmp/preprocessed.dts 2>&1 | tee /tmp/dtc_error.log; then
+          # 核心修改：使用 || 来捕获错误，确保在 set -e 环境下也能执行调试代码
+          # 即使 dtc 失败，|| 后面的代码块也会执行
+          ./scripts/dtc/dtc -I dts -O dtb -o $DTB_FILE -@ -Wno-unit_address_vs_reg $TMP_FILE 2>&1 | tee $LOG_FILE || {
             echo "❌ DTC Compilation failed. Analyzing error context..."
             
-            # 提取错误行号 (例如从错误信息中提取 5561)
-            ERROR_LINE=$(grep -oP 'Error: /tmp/preprocessed.dts:\K[0-9]+' /tmp/dtc_error.log || echo "0")
+            # 提取错误行号 (使用 sed 兼容性更好)
+            # 错误格式: Error: /tmp/preprocessed.dts:5561.2-6 ...
+            LINE_NUM=$(sed -n 's/.*preprocessed.dts:\([0-9]*\).*/\1/p' $LOG_FILE | head -1)
             
-            if [ "$ERROR_LINE" -gt 0 ]; then
-              echo "🔍 错误发生在第 $ERROR_LINE 行，显示前后 10 行代码："
+            if [ -n "$LINE_NUM" ] && [ "$LINE_NUM" -gt 0 ]; then
+              echo "🔍 错误发生在第 $LINE_NUM 行，显示前后 10 行代码："
               echo "--------------------------------------------------"
-              START_LINE=$((ERROR_LINE - 10))
-              [ $START_LINE -lt 1 ] && START_LINE=1
-              # 打印出错位置附近的代码，并显示行号
-              sed -n "${START_LINE},$((ERROR_LINE + 10))p" /tmp/preprocessed.dts | cat -n
+              # 计算起始行（防止小于1）
+              START=$((LINE_NUM - 10))
+              [ $START -lt 1 ] && START=1
+              # 打印出错位置附近的代码，带行号
+              sed -n "${START},$((LINE_NUM + 10))p" $TMP_FILE | cat -n
               echo "--------------------------------------------------"
-              echo "💡 提示：通常是因为节点定义放在了根节点 }; 之外。"
+              echo "💡 提示：请检查上面显示的代码段，通常是因为节点定义放在了根节点 }; 之外，或者括号不匹配。"
             else
               echo "无法解析具体行号，显示文件末尾内容："
-              tail -n 50 /tmp/preprocessed.dts
+              tail -n 50 $TMP_FILE
             fi
             
-            # 强制退出并报错
+            # 打印完毕后，显式退出并报错
             exit 1
-          fi
+          }
           
           echo "✅ Build complete."
 
