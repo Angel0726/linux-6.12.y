@@ -712,4 +712,5 @@
 
 &rknpu {
 	status = "okay";
+	reg = <0x0 0xfde40000 0x0 0xb000>;
 };
