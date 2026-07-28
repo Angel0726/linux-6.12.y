@@ -13,7 +13,7 @@
 		status = "disabled";
 	};
 
-	otp: otp@fe38c000 {
+	&otp {
 		compatible = "rockchip,rk3568-otp";
 		reg = <0x0 0xfe38c000 0x0 0x4000>;
 		#address-cells = <1>;
@@ -32,7 +32,7 @@
 			reg = <0x09 0x1>;
 			bits = <0 4>;
 		};
-		log_leakage: log-leakage@1b {
+		&log_leakage {
 			reg = <0x1b 0x1>;
 		};
 		core_pvtm:core-pvtm@2a {
@@ -640,13 +640,13 @@
 };
 
 &otp {
-	gpu_leakage: gpu-leakage@1d {
+	&gpu_leakage {
 		reg = <0x1d 0x1>;
 	};
 	gpu_opp_info: gpu-opp-info@3c {
 		reg = <0x3c 0x6>;
 	};
-	npu_leakage: npu-leakage@1c {
+	&npu_leakage {
 		reg = <0x1c 0x1>;
 	};
 	npu_opp_info: npu-opp-info@42 {
