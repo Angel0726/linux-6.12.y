@@ -12,7 +12,8 @@
 #include <dt-bindings/input/input.h>
 #include <dt-bindings/pinctrl/rockchip.h>
 #include <dt-bindings/soc/rockchip,vop2.h>
-#include "rk3568.dtsi"
+// #include "rk3568.dtsi"
+#include "rk3568-vngpu-rk8092.dtsi"
 
 / {
     	model = "DG NAS LITE";
@@ -1087,9 +1088,4 @@ key 64    TV_MEDIA_PLAY
 &usb_host1_xhci {
 	status = "okay";
 };
-
-
-
-#include "rk3568-vngpu-rk809.dtsi"
-
 
