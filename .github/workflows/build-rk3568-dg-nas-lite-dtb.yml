@@ -1,0 +1,90 @@
+# .github/workflows/build-rk3568-dg-nas-lite-dtb.yml
+name: Build RK3568 DG-NAS-Lite DTB
+
+on:
+  # 推送到 main 分支或修改了相关 DTS 时触发
+  push:
+    branches: [ main ]
+    paths:
+      - 'arch/arm64/boot/dts/rockchip/rk3568-dg-nas-lite.dts'
+      - 'arch/arm64/boot/dts/rockchip/rk3568-dg-nas-lite.dtsi'
+      - 'arch/arm64/boot/dts/rockchip/Makefile'
+      - 'arch/arm64/configs/defconfig'
+      - '.github/workflows/build-rk3568-dg-nas-lite-dtb.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'arch/arm64/boot/dts/rockchip/rk3568-dg-nas-lite.dts'
+      - 'arch/arm64/boot/dts/rockchip/Makefile'
+  # 允许在 Actions 页面手动点击运行
+  workflow_dispatch:
+
+# 避免同一分支重复构建抢资源
+concurrency:
+  group: dtb-${{ github.ref }}-${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  build-dtb:
+    name: Compile rk3568-dg-nas-lite.dtb
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            bc bison build-essential cpio flex git \
+            libelf-dev libssl-dev libncurses-dev \
+            lz4 zstd \
+            gcc-aarch64-linux-gnu \
+            device-tree-compiler
+
+      - name: Show toolchain versions
+        run: |
+          aarch64-linux-gnu-gcc --version | head -n1
+          dtc --version
+          make --version | head -n1
+
+      - name: Generate .config (arm64 defconfig)
+        run: |
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- defconfig
+          # 确保开启了 Rockchip 平台，理论上 defconfig 默认已开启，这里兜底
+          grep -E '^CONFIG_ARCH_ROCKCHIP=y' .config \
+            || (echo "CONFIG_ARCH_ROCKCHIP is not set!" && exit 1)
+
+      - name: Build the target DTB only
+        run: |
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- \
+               ARCH=arm64 \
+               arch/arm64/boot/dts/rockchip/rk3568-dg-nas-lite.dtb
+
+      - name: Verify output
+        run: |
+          ls -lh arch/arm64/boot/dts/rockchip/rk3568-dg-nas-lite.dtb
+          # 用 dtc 反编译一下，确认产物有效
+          dtc -I dtb -O dts \
+              arch/arm64/boot/dts/rockchip/rk3568-dg-nas-lite.dtb \
+              -o /tmp/rk3568-dg-nas-lite.verify.dts
+          head -n 30 /tmp/rk3568-dg-nas-lite.verify.dts
+
+      - name: Upload DTB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rk3568-dg-nas-lite-dtb
+          path: arch/arm64/boot/dts/rockchip/rk3568-dg-nas-lite.dtb
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload verification DTS (optional)
+        uses: actions/upload-artifact@v4
+        with:
+          name: rk3568-dg-nas-lite-verify-dts
+          path: /tmp/rk3568-dg-nas-lite.verify.dts
+          if-no-files-found: warn
+          retention-days: 7
