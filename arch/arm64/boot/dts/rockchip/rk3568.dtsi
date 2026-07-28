@@ -3,7 +3,7 @@
  * Copyright (c) 2021 Rockchip Electronics Co., Ltd.
  */
 
-#include "rk356x-base.dtsi"
+#include "rk3568-ramoops.dtsi"
 
 / {
 	compatible = "rockchip,rk3568";
