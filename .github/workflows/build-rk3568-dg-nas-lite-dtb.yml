@@ -46,10 +46,11 @@ jobs:
         run: |
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- defconfig
 
-      - name: Build Rockchip DTBS
+      - name: Build Target DTB
         run: |
-          # 🌟直接编译整个 rockchip 目录，安全可靠，不会触发路径 bug
-          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j$(nproc) arch/arm64/boot/dts/rockchip/
+          # 🌟使用标准的 make dtbs 目标，100% 触发 Kbuild 遍历所有 subdir
+          # 它会自动编译 Makefile 中注册的 rk3568-dg-nas-lite.dtb
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j$(nproc) dtbs
 
       - name: Verify output
         run: |
