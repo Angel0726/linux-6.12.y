@@ -1,0 +1,110 @@
+name: Build RK3568 DG-NAS-Lite DTB
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'arch/arm64/boot/dts/rockchip/rk3568-dg-nas-lite.dts'
+      - 'arch/arm64/boot/dts/rockchip/rk3568.dtsi'
+      # 新增：监听 include 文件的变动
+      - 'arch/arm64/boot/dts/rockchip/rk3568-vngpu.dtsi'
+      - 'arch/arm64/boot/dts/rockchip/rk3568-vngpu-rk809.dtsi'
+      - 'arch/arm64/boot/dts/rockchip/rk3568-ramoops.dtsi'
+      - 'arch/arm64/boot/dts/rockchip/Makefile'
+      - 'arch/arm64/configs/defconfig'
+      - '.github/workflows/build-rk3568-dg-nas-lite-dtb.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'arch/arm64/boot/dts/rockchip/rk3568-dg-nas-lite.dts'
+      - 'arch/arm64/boot/dts/rockchip/Makefile'
+      - 'arch/arm64/boot/dts/rockchip/*.dtsi'
+  workflow_dispatch:
+
+concurrency:
+  group: dtb-${{ github.ref }}-${{ github.sha }}-${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  build-dtb:
+    name: Compile rk3568-dg-nas-lite.dtb
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            bc bison build-essential cpio flex git \
+            libelf-dev libssl-dev libncurses-dev \
+            lz4 zstd \
+            gcc-aarch64-linux-gnu \
+            device-tree-compiler
+
+      - name: Build Environment Setup
+        run: |
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- defconfig
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- scripts
+
+      - name: Build Target DTB (Manual Compilation)
+        run: |
+          # 定义源文件和输出文件
+          DTS_FILE="arch/arm64/boot/dts/rockchip/rk3568-dg-nas-lite.dts"
+          DTB_FILE="arch/arm64/boot/dts/rockchip/rk3568-dg-nas-lite.dtb"
+          
+          # 定义包含路径 (必须包含内核源码的相关目录)
+          INCLUDES="-I./arch/arm64/boot/dts -I./include -I./scripts/dtc/include-prefixes"
+          
+          echo "🔨 Step 1: Preprocessing $DTS_FILE..."
+          # 使用 gcc 预处理，展开 #include 和处理宏定义
+          gcc -E -P -x assembler-with-cpp -undef -D__DTS__ $INCLUDES $DTS_FILE -o /tmp/preprocessed.dts
+          
+          echo "🔨 Step 2: Compiling to $DTB_FILE..."
+          
+          # 运行 DTC 编译，并在失败时输出详细上下文
+          if ! ./scripts/dtc/dtc -I dts -O dtb -o $DTB_FILE -@ -Wno-unit_address_vs_reg /tmp/preprocessed.dts 2>&1 | tee /tmp/dtc_error.log; then
+            echo "❌ DTC Compilation failed. Analyzing error context..."
+            
+            # 提取错误行号 (例如从错误信息中提取 5561)
+            ERROR_LINE=$(grep -oP 'Error: /tmp/preprocessed.dts:\K[0-9]+' /tmp/dtc_error.log || echo "0")
+            
+            if [ "$ERROR_LINE" -gt 0 ]; then
+              echo "🔍 错误发生在第 $ERROR_LINE 行，显示前后 10 行代码："
+              echo "--------------------------------------------------"
+              START_LINE=$((ERROR_LINE - 10))
+              [ $START_LINE -lt 1 ] && START_LINE=1
+              # 打印出错位置附近的代码，并显示行号
+              sed -n "${START_LINE},$((ERROR_LINE + 10))p" /tmp/preprocessed.dts | cat -n
+              echo "--------------------------------------------------"
+              echo "💡 提示：通常是因为节点定义放在了根节点 }; 之外。"
+            else
+              echo "无法解析具体行号，显示文件末尾内容："
+              tail -n 50 /tmp/preprocessed.dts
+            fi
+            
+            # 强制退出并报错
+            exit 1
+          fi
+          
+          echo "✅ Build complete."
+
+      - name: Verify output
+        run: |
+          ls -lh arch/arm64/boot/dts/rockchip/rk3568-dg-nas-lite.dtb
+          dtc -I dtb -O dts \
+              arch/arm64/boot/dts/rockchip/rk3568-dg-nas-lite.dtb \
+              -o /tmp/rk3568-dg-nas-lite.verify.dts
+          head -n 30 /tmp/rk3568-dg-nas-lite.verify.dts
+
+      - name: Upload DTB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rk3568-dg-nas-lite-dtb
+          path: arch/arm64/boot/dts/rockchip/rk3568-dg-nas-lite.dtb
+          if-no-files-found: error
+          retention-days: 30
