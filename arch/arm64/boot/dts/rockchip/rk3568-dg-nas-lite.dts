@@ -13,7 +13,9 @@
 #include <dt-bindings/pinctrl/rockchip.h>
 #include <dt-bindings/soc/rockchip,vop2.h>
 #include "rk3568.dtsi"
-
+#include "rk3568-vngpu.dtsi"
+#include "rk3568-vngpu-rk809.dtsi"
+#include "rk3568-ramoops.dtsi"
 
 / {
     	model = "DG NAS LITE";
@@ -1089,6 +1091,3 @@ key 64    TV_MEDIA_PLAY
 	status = "okay";
 };
 
-#include "rk3568-vngpu.dtsi"
-#include "rk3568-vngpu-rk809.dtsi"
-#include "rk3568-ramoops.dtsi"
