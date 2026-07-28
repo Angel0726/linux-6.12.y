@@ -41,9 +41,12 @@ jobs:
             gcc-aarch64-linux-gnu \
             device-tree-compiler
 
-      - name: Build DTC Tool
-        # 我们只需要内核自带的 dtc 编译器和预处理头文件
+      - name: Build Environment Setup
         run: |
+          # 1. 生成 .config (make scripts 依赖此文件，虽然我们只编 dtb)
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- defconfig
+          
+          # 2. 构建内核自带的 DTC 工具 (scripts/dtc/dtc)
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- scripts
 
       - name: Build Target DTB (Manual Compilation)
@@ -52,25 +55,15 @@ jobs:
           DTS_FILE="arch/arm64/boot/dts/rockchip/rk3568-dg-nas-lite.dts"
           DTB_FILE="arch/arm64/boot/dts/rockchip/rk3568-dg-nas-lite.dtb"
           
-          # 定义包含路径
+          # 定义包含路径 (必须包含内核源码的相关目录)
           INCLUDES="-I./arch/arm64/boot/dts -I./include -I./scripts/dtc/include-prefixes"
           
-          echo "🔨 Preprocessing $DTS_FILE..."
-          # 1. 使用 gcc 预处理 dts 文件 (处理 #include, #define 等)
-          #    -E: 只预处理
-          #    -P: 不生成 #line 指令
-          #    -x assembler-with-cpp: 指定输入为汇编风格的 C 代码
-          #    -undef: 取消预定义的非标准宏
-          #    -D__DTS__: 定义 DTS 宏
+          echo "🔨 Step 1: Preprocessing $DTS_FILE..."
+          # 使用 gcc 预处理，展开 #include 和处理宏定义
           gcc -E -P -x assembler-with-cpp -undef -D__DTS__ $INCLUDES $DTS_FILE -o /tmp/preprocessed.dts
           
-          echo "🔨 Compiling to $DTB_FILE..."
-          # 2. 使用内核自带的 dtc 编译
-          #    -I dts: 输入格式
-          #    -O dtb: 输出格式
-          #    -o: 输出文件
-          #    -@: 生成符号信息 (支持设备树插件/overlay)
-          #    -Wno-unit_address_vs_reg: 忽略常见的寄存器地址警告 (可选)
+          echo "🔨 Step 2: Compiling to $DTB_FILE..."
+          # 使用内核构建好的 dtc 进行二进制编译
           ./scripts/dtc/dtc -I dts -O dtb -o $DTB_FILE -@ -Wno-unit_address_vs_reg /tmp/preprocessed.dts
           
           echo "✅ Build complete."
