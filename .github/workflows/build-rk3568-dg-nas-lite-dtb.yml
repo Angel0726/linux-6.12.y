@@ -47,8 +47,12 @@ jobs:
 
       - name: Build Target DTB
         run: |
-          # 仅编译指定的 dts 文件，不触发全量 dtbs 编译
-          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j$(nproc) arch/arm64/boot/dts/rockchip/rk3568-dg-nas-lite.dtb
+          # 1. 准备构建脚本和工具链
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- scripts
+          
+          # 2. 进入 dts 目录并编译指定的 dtb
+          # 这样可以避免 Kbuild 路径拼接重复的问题，且速度最快
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -C arch/arm64/boot/dts rockchip/rk3568-dg-nas-lite.dtb
 
       - name: Verify output
         run: |
