@@ -17,7 +17,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: dtb-${{ github.ref }}-${{ github.workflow }}
+  group: dtb-${{ github.ref }}-${{ github.sha }}-${{ github.workflow }}
   cancel-in-progress: true
 
 jobs:
