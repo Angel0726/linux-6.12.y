@@ -13,9 +13,7 @@
 #include <dt-bindings/pinctrl/rockchip.h>
 #include <dt-bindings/soc/rockchip,vop2.h>
 #include "rk3568.dtsi"
-#include "rk3568-vngpu.dtsi"
-#include "rk3568-vngpu-rk809.dtsi"
-#include "rk3568-ramoops.dtsi"
+
 
 / {
     	model = "DG NAS LITE";
@@ -225,9 +223,9 @@
 		#cooling-cells = <2>;
 		pwms = <&pwm0 0 40000 0>;
 		fan-supply = <&dc_12v>;
-		//interrupt-parent = <&gpio0>;
-		//interrupts = <20 IRQ_TYPE_EDGE_FALLING>;
-		//pulses-per-revolution = <2>;
+		interrupt-parent = <&gpio0>;
+		interrupts = <20 IRQ_TYPE_EDGE_FALLING>;
+		pulses-per-revolution = <2>;
 		cooling-levels = <0 50 100 150 200 255>;
 	};
 };
@@ -938,3 +936,7 @@
 &usb_host1_xhci {
 	status = "okay";
 };
+
+#include "rk3568-vngpu.dtsi"
+#include "rk3568-vngpu-rk809.dtsi"
+#include "rk3568-ramoops.dtsi"
