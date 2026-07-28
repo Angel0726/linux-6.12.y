@@ -1089,7 +1089,7 @@ key 64    TV_MEDIA_PLAY
 };
 
 
-#include "rk3568-vngpu.dtsi"
+
 #include "rk3568-vngpu-rk809.dtsi"
-#include "rk3568-ramoops.dtsi"
+
 
