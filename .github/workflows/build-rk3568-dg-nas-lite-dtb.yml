@@ -2,7 +2,6 @@
 name: Build RK3568 DG-NAS-Lite DTB
 
 on:
-  # 推送到 main 分支或修改了相关 DTS 时触发
   push:
     branches: [ main ]
     paths:
@@ -16,10 +15,8 @@ on:
     paths:
       - 'arch/arm64/boot/dts/rockchip/rk3568-dg-nas-lite.dts'
       - 'arch/arm64/boot/dts/rockchip/Makefile'
-  # 允许在 Actions 页面手动点击运行
   workflow_dispatch:
 
-# 避免同一分支重复构建抢资源
 concurrency:
   group: dtb-${{ github.ref }}-${{ github.workflow }}
   cancel-in-progress: true
@@ -54,14 +51,24 @@ jobs:
       - name: Generate .config (arm64 defconfig)
         run: |
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- defconfig
-          # 确保开启了 Rockchip 平台，理论上 defconfig 默认已开启，这里兜底
           grep -E '^CONFIG_ARCH_ROCKCHIP=y' .config \
             || (echo "CONFIG_ARCH_ROCKCHIP is not set!" && exit 1)
 
+      - name: Register DTB in rockchip Makefile
+        run: |
+          MAKEFILE=arch/arm64/boot/dts/rockchip/Makefile
+          if ! grep -q "rk3568-dg-nas-lite.dtb" "$MAKEFILE"; then
+            echo "dtb-\$(CONFIG_ARCH_ROCKCHIP) += rk3568-dg-nas-lite.dtb" >> "$MAKEFILE"
+            echo "Added rk3568-dg-nas-lite.dtb to $MAKEFILE"
+          else
+            echo "rk3568-dg-nas-lite.dtb already registered."
+          fi
+          # 输出末尾内容以确认
+          tail -n 5 "$MAKEFILE"
+
       - name: Build the target DTB only
         run: |
-          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- \
-               ARCH=arm64 \
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j$(nproc) \
                arch/arm64/boot/dts/rockchip/rk3568-dg-nas-lite.dtb
 
       - name: Verify output
