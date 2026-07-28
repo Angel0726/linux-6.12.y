@@ -616,7 +616,7 @@
 	#size-cells = <1>;
 	clocks = <&cru CLK_OTPC_NS_USR>, <&cru CLK_OTPC_NS_SBPI>,
 			<&cru PCLK_OTPC_NS>, <&cru PCLK_OTPPHY>;
-	clock-names = "usr", "sbpi", "apb", "phy";
+	clock-names = "opt", "sbpi", "apb", "phy";
 	resets = <&cru SRST_OTPPHY>;
 	reset-names = "otp_phy";
 
