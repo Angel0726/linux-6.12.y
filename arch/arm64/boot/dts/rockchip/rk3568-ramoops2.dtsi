@@ -13,5 +13,11 @@
 			pmsg-size = <0x50000>;
 			record-size = <0x20000>;
 		};
+    
+		/* 增加 IEP 保留内存，地址需避开系统已用区域 */
+    		iep_roi_memory: iep-roi-memory@11000000 {
+        		reg = <0x0 0x11000000 0x0 0x00100000>; /* 1MB */
+        		no-map;
+    		};
 	};
 };
