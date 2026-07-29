@@ -542,12 +542,14 @@
 		rockchip,default-max-load = <2088960>;
 		resets = <&cru SRST_A_RKVDEC>, <&cru SRST_H_RKVDEC>,
 			 <&cru SRST_RKVDEC_CA>, <&cru SRST_RKVDEC_CORE>,
-			 <&cru SRST_RKVDEC_HEVC_CA>;
+			 <&cru SRST_RKVDEC_HEVC_CA>,
+			 <&cru SRST_H_NIU>, <&cru SRST_A_NIU>;
 		assigned-clocks = <&cru ACLK_RKVDEC>, <&cru CLK_RKVDEC_CA>,
 				  <&cru CLK_RKVDEC_CORE>, <&cru CLK_RKVDEC_HEVC_CA>;
 		assigned-clock-rates = <297000000>, <297000000>, <297000000>, <297000000>;
 		reset-names = "video_a", "video_h", "video_cabac",
-			      "video_core", "video_hevc_cabac";
+			      "video_core", "video_hevc_cabac",
+			      "shared_niu_h", "shared_niu_a"; 
 		power-domains = <&power RK3568_PD_RKVDEC>;
 		operating-points-v2 = <&rkvdec_opp_table>;
 		vdec-supply = <&vdd_logic>;
