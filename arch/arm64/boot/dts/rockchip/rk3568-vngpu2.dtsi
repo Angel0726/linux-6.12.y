@@ -653,6 +653,8 @@
 };
 
 &iep {
+	/* 关联保留内存 */
+    	rockchip,roi-memory = <&iep_roi_memory>;
 	status = "okay";
 };
 
