@@ -687,6 +687,12 @@
 };
 
 &rkvenc {
+	/* 保留你之前修复的 opp 表引用 */
+    	operating-points-v2 = <&rkvenc_opp_table>;
+    
+    	/* 新增：添加 leakage 和 pvtm 的引用 */
+    	nvmem-cells = <&log_leakage>, <&core_pvtm>;
+    	nvmem-cell-names = "leakage", "pvtm";
 	status = "okay";
 };
 
