@@ -483,8 +483,9 @@
 	rkvenc_opp_table: rkvenc-opp-table {
 		compatible = "operating-points-v2";
 
-		nvmem-cells = <&core_pvtm>;
-		nvmem-cell-names = "pvtm";
+    		/* 新增：添加 leakage 和 pvtm 的引用 */
+    		nvmem-cells = <&log_leakage>, <&core_pvtm>;
+    		nvmem-cell-names = "leakage", "pvtm";
 		rockchip,pvtm-voltage-sel = <
 			0        84000   0
 			84001    91000   1
@@ -681,6 +682,9 @@
 &rkvdec {
 	rockchip,disable-auto-freq;
 	assigned-clock-rates = <396000000>, <396000000>, <396000000>, <600000000>;
+    	/* 新增：添加 leakage 和 pvtm 的引用 */
+    	nvmem-cells = <&log_leakage>, <&core_pvtm>;
+    	nvmem-cell-names = "leakage", "pvtm";
 	status = "okay";
 };
 
@@ -721,4 +725,12 @@
 &rknpu {
 	status = "okay";
 	reg = <0x0 0xfde40000 0x0 0xb000>;
+	/* 添加复位控制 */
+    	resets = <&cru SRST_A_NPU>, <&cru SRST_H_NPU>;
+    	reset-names = "srst_a", "srst_h";
+    
+    	/* 确保电源域正确 */
+    	power-domains = <&power RK3568_PD_NPU>;
+    	/* 如果需要，可以添加电源域的reset */
+    	/* rockchip,pmu = <&pmugrf>; */
 };
