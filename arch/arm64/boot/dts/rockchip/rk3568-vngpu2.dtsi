@@ -156,7 +156,7 @@
 		power-domains = <&power RK3568_PD_NPU>;
 		operating-points-v2 = <&npu_opp_table>;
 		iommus = <&rknpu_mmu>;
-		status = "disabled";
+		status = "okay";
 	};
 
 	npu_opp_table: npu-opp-table {
@@ -733,4 +733,10 @@
     	power-domains = <&power RK3568_PD_NPU>;
     	/* 如果需要，可以添加电源域的reset */
     	/* rockchip,pmu = <&pmugrf>; */
+};
+&bus_npu {
+	status = "okay";
+};
+&rknpu_mmu {
+    	status = "okay";
 };
